@@ -134,7 +134,7 @@
         <div class="form-group">
             <input type="text" id="pageUrl" placeholder="https://example.com">
         </div>
-        <button onclick="extractMedia()" class="submit-btn">Спарсить Медиа</button>
+        <button onclick="()" class="submit-btn">Спарсить Медиа</button>
         <div id="parserResult" class="result-box" style="display:none;"></div>
     </div>
 </div>
@@ -182,20 +182,73 @@
     }
 
     // Парсер
+    let currentExtractedImages = [];
+
     async function extractMedia() {
         const url = document.getElementById('pageUrl').value;
+        if (!url) return alert('Введите URL');
+
         const formData = new FormData();
         formData.append('url', url);
 
-        const res = await fetch('/api/extract-media', { method: 'POST', body: formData });
-        const data = await res.json();
         const resDiv = document.getElementById('parserResult');
         resDiv.style.display = 'block';
-        if(data.images) {
-            resDiv.innerHTML = `<p>Найдено картинок: ${data.total_images}</p>` + 
-                data.images.map(img => `<img src="${img}" style="max-width:100px; margin:5px;">`).join('');
+        resDiv.innerHTML = '<p>Загрузка и парсинг парсера...</p>';
+
+        try {
+            const res = await fetch('/api/extract-media', { method: 'POST', body: formData });
+            const data = await res.json();
+
+            if (!res.ok) throw new Error(data.detail || 'Ошибка');
+
+            currentExtractedImages = data.images || [];
+
+            if (currentExtractedImages.length === 0) {
+                resDiv.innerHTML = '<p>Картинки не найдены</p>';
+                return;
+            }
+
+            let html = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h4>Найдено картинок: ${data.total_images}</h4>
+                    <button onclick="downloadAllZip()" class="submit-btn" style="width: auto; padding: 8px 16px;">📦 Скачать всё в ZIP</button>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px;">
+            `;
+
+            currentExtractedImages.forEach((imgUrl, index) => {
+                html += `
+                    <div style="background: #1e293b; border: 1px solid #334155; padding: 8px; border-radius: 8px; text-align: center;">
+                        <img src="${imgUrl}" style="width: 100%; height: 100px; object-fit: contain; border-radius: 4px; margin-bottom: 8px;">
+                        <a href="${imgUrl}" target="_blank" download style="display: block; color: #38bdf8; font-size: 12px; text-decoration: none;">💾 Скачать</a>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            resDiv.innerHTML = html;
+
+        } catch (err) {
+            resDiv.innerHTML = `<p style="color: #ef4444;">Ошибка: ${err.message}</p>`;
+        }
+    }
+
+    async function downloadAllZip() {
+        if (!currentExtractedImages.length) return;
+
+        const formData = new FormData();
+        formData.append('urls', currentExtractedImages.join(','));
+
+        const res = await fetch('/api/download-zip', { method: 'POST', body: formData });
+        if (res.ok) {
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'extracted_images.zip';
+            a.click();
         } else {
-            resDiv.innerText = 'Не удалось извлечь медиа';
+            alert('Не удалось создать ZIP архив');
         }
     }
 </script>
