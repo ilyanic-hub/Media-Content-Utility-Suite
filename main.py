@@ -9,11 +9,15 @@ from fastapi.templating import Jinja2Templates
 from PIL import Image, ImageOps
 import httpx
 from bs4 import BeautifulSoup
+from pathlib import Path
 
 app = FastAPI(title="Media Utility Suite")
 
 # HTML шаблоны
 templates = Jinja2Templates(directory="templates")
+# Получаем абсолютный путь к папке с проектом
+BASE_DIR = Path(__file__).resolve().parent
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
