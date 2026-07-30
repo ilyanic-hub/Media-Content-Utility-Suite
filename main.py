@@ -10,6 +10,7 @@ from fastapi.templating import Jinja2Templates
 from PIL import Image, ImageOps
 import httpx
 from bs4 import BeautifulSoup
+from fastapi.responses import PlainTextResponse
 
 app = FastAPI(title="Media Utility Suite")
 
@@ -31,6 +32,28 @@ async def read_root(request: Request):
         request=request, 
         name="index.html"
     )
+
+# 1. robots.txt
+@app.get("/robots.txt", response_class=PlainTextResponse)
+async def get_robots():
+    return """User-agent: *
+Allow: /
+Sitemap: https://media-content-utility-suite-production.up.railway.app/sitemap.xml
+"""
+
+# 2. sitemap.xml
+@app.get("/sitemap.xml", response_class=Response)
+async def get_sitemap():
+    content = """<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemap.org/schemas/sitemap/0.9">
+   <url>
+      <loc>https://media-content-utility-suite-production.up.railway.app/</loc>
+      <lastmod>2026-07-31</lastmod>
+      <changefreq>weekly</changefreq>
+      <priority>1.0</priority>
+   </url>
+</urlset>"""
+    return Response(content=content, media_type="application/xml")
 
 
 # ---------------------------------------------------------
