@@ -49,13 +49,13 @@ async def process_image(
         contents = await file.read()
         image = Image.open(io.BytesIO(contents))
 
-        # Разворачиваем изображение по ориентации EXIF до его удаления
+        # Корректируем ориентацию
         try:
             image = ImageOps.exif_transpose(image)
         except Exception:
             pass
 
-        # Ресайз при необходимости
+        # Уменьшение размера
         if max_width and image.width > max_width:
             aspect_ratio = max_width / float(image.width)
             new_height = int(float(image.height) * aspect_ratio)
@@ -65,34 +65,47 @@ async def process_image(
         if fmt == "JPG":
             fmt = "JPEG"
 
-        # Приведение цветовых режимов
-        if fmt == "JPEG" and image.mode in ("RGBA", "LA", "P"):
+        # Приведение цветовых режимов в зависимости от формата
+        if fmt in ("JPEG", "BMP") and image.mode in ("RGBA", "LA", "P"):
             image = image.convert("RGB")
-        elif fmt in ("WEBP", "PNG") and image.mode not in ("RGB", "RGBA"):
+        elif fmt in ("WEBP", "PNG", "AVIF", "GIF", "TIFF") and image.mode not in ("RGB", "RGBA"):
             image = image.convert("RGBA")
 
         output_io = io.BytesIO()
         save_kwargs = {"format": fmt}
 
-        if fmt in ("JPEG", "WEBP"):
+        # Настройки качества для поддерживаемых форматов
+        if fmt in ("JPEG", "WEBP", "AVIF"):
             save_kwargs["quality"] = quality
             save_kwargs["optimize"] = True
+        elif fmt == "PNG":
+            save_kwargs["optimize"] = True
 
-        # Если НЕ требуется стриать EXIF, пытаемся сохранить исходный
+        # Сохранение EXIF если опция отключена
         if not strip_exif and "exif" in image.info:
             save_kwargs["exif"] = image.info["exif"]
 
-        # image.save() по умолчанию НЕ пишет EXIF, если мы его явно не передали в save_kwargs
         image.save(output_io, **save_kwargs)
         output_io.seek(0)
 
         mime_types = {
             "WEBP": "image/webp",
             "JPEG": "image/jpeg",
-            "PNG": "image/png"
+            "PNG": "image/png",
+            "AVIF": "image/avif",
+            "GIF": "image/gif",
+            "BMP": "image/bmp",
+            "TIFF": "image/tiff",
+            "ICO": "image/x-icon"
         }
 
-        ext = fmt.lower() if fmt != "JPEG" else "jpg"
+        ext_map = {
+            "JPEG": "jpg",
+            "TIFF": "tif",
+            "ICO": "ico"
+        }
+        ext = ext_map.get(fmt, fmt.lower())
+
         original_name = file.filename.rsplit('.', 1)[0] if file.filename else "image"
         filename = f"processed_{original_name}.{ext}"
 
