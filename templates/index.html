@@ -202,6 +202,7 @@
         <button class="tab-btn active" onclick="openTab('img-tab', this)">Оптимизатор Фото</button>
         <button class="tab-btn" onclick="openTab('text-tab', this)">Очистка Текста</button>
         <button class="tab-btn" onclick="openTab('parser-tab', this)">Парсер Медиа</button>
+        <button class="tab-btn" onclick="openTab('yt-tab', this)">Скачать видео (YouTube, TikTok и др.)</button>
     </div>
 
     <!-- TAB 1: IMAGE -->
@@ -250,6 +251,16 @@
         <button onclick="extractMedia()" class="submit-btn">Спарсить Медиа</button>
         <div id="parserResult" class="result-box" style="display:none;"></div>
     </div>
+
+    <!-- TAB 4: YOUTUBE -->
+<div id="yt-tab" class="tab-content">
+    <h3>Загрузка видео с YouTube</h3>
+    <div class="form-group">
+        <input type="text" id="ytUrl" placeholder="Вставьте ссылку на YouTube (https://youtu.be/...)">
+    </div>
+    <button onclick="fetchYoutubeInfo()" class="submit-btn">Загрузить информацию</button>
+    <div id="ytResult" class="result-box" style="display:none;"></div>
+</div>
 
     <!-- SEO БЛОК -->
     <div class="seo-info">
@@ -388,6 +399,69 @@
             alert('Не удалось создать ZIP архив');
         }
     }
+
+    async function fetchYoutubeInfo() {
+    const url = document.getElementById('ytUrl').value;
+    if (!url) return alert('Введите ссылку на YouTube');
+
+    const formData = new FormData();
+    formData.append('url', url);
+
+    const resDiv = document.getElementById('ytResult');
+    resDiv.style.display = 'block';
+    resDiv.innerHTML = '<p>Анализируем видео...</p>';
+
+    try {
+        const res = await fetch('/api/youtube-info', { method: 'POST', body: formData });
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.detail || 'Ошибка получения видео');
+
+        let html = `
+            <div style="text-align:center; margin-bottom:15px;">
+                <img src="${data.thumbnail}" style="width:100%; max-width:300px; border-radius:8px;">
+                <h4 style="margin:10px 0 5px 0;">${data.title}</h4>
+            </div>
+            <label>Выберите качество:</label>
+            <div style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">
+        `;
+
+        data.formats.forEach(f => {
+            html += `
+                <button onclick="getDirectYtUrl('${url}', '${f.format_id}')" class="submit-btn" style="background:#334155; color:#fff; font-size:13px; text-align:left; display:flex; justify-content:space-between;">
+                    <span>📹 ${f.resolution} (${f.ext.toUpperCase()})</span>
+                    <span>Скачать 💾</span>
+                </button>
+            `;
+        });
+
+        html += '</div>';
+        resDiv.innerHTML = html;
+
+    } catch (err) {
+        resDiv.innerHTML = `<p style="color: #ef4444;">Ошибка: ${err.message}</p>`;
+    }
+}
+
+async function getDirectYtUrl(videoUrl, formatId) {
+    const formData = new FormData();
+    formData.append('url', videoUrl);
+    formData.append('format_id', formatId);
+
+    try {
+        const res = await fetch('/api/download-youtube', { method: 'POST', body: formData });
+        const data = await res.json();
+        
+        if (data.download_url) {
+            // Открываем прямую ссылку на поток для скачивания
+            window.open(data.download_url, '_blank');
+        } else {
+            alert('Не удалось сформировать ссылку');
+        }
+    } catch (err) {
+        alert('Ошибка при скачивании');
+    }
+}
 </script>
 </body>
 </html>
