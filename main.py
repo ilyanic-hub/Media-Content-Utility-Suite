@@ -1,6 +1,6 @@
 import io
 import re
-from typing import Optional
+from typing import Optional, Request
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.responses import StreamingResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -13,6 +13,10 @@ app = FastAPI(title="Media Utility Suite")
 
 # HTML шаблоны
 templates = Jinja2Templates(directory="templates")
+
+@app.get("/", response_class=HTMLResponse)
+async def read_root(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
 
 # ---------------------------------------------------------
 # 1. КОНВЕРТАЦИЯ, СЖАТИЕ И УДАЛЕНИЕ EXIF (Идеи 1 и 3)
