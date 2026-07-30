@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media & Text Utility Suite | Бесплатные онлайн инструменты</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent: #38bdf8;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+        }
+        h1 { text-align: center; color: var(--accent); }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            background: var(--card-bg);
+            border: 1px solid #334155;
+            color: var(--text);
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+        .tab-btn.active {
+            background: var(--accent);
+            color: #000;
+        }
+        .tab-content {
+            display: none;
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #334155;
+        }
+        .tab-content.active { display: block; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; color: var(--text-muted); }
+        input[type="text"], textarea, select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #334155;
+            background: #0f172a;
+            color: #fff;
+            box-sizing: border-box;
+        }
+        button.submit-btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--accent);
+            border: none;
+            color: #000;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .result-box {
+            margin-top: 15px;
+            padding: 10px;
+            background: #0f172a;
+            border-radius: 6px;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Media Utility Suite</h1>
+    
+    <div class="tabs">
+        <button class="tab-btn active" onclick="openTab('img-tab', this)">Оптимизатор Фото</button>
+        <button class="tab-btn" onclick="openTab('text-tab', this)">Очистка Текста</button>
+        <button class="tab-btn" onclick="openTab('parser-tab', this)">Парсер Медиа</button>
+    </div>
+
+    <!-- TAB 1: IMAGE -->
+    <div id="img-tab" class="tab-content active">
+        <h3>Сжатие, Конвертация и Очистка EXIF</h3>
+        <form id="imgForm">
+            <div class="form-group">
+                <label>Выберите изображение:</label>
+                <input type="file" id="imgFile" accept="image/*" required>
+            </div>
+            <div class="form-group">
+                <label>Формат:</label>
+                <select id="targetFormat">
+                    <option value="WEBP">WebP (Рекомендуется)</option>
+                    <option value="JPEG">JPEG</option>
+                    <option value="PNG">PNG</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label><input type="checkbox" id="stripExif" checked> Удалить EXIF метаданные (анонимизация)</label>
+            </div>
+            <button type="submit" class="submit-btn">Обработать и Скачать</button>
+        </form>
+    </div>
+
+    <!-- TAB 2: TEXT -->
+    <div id="text-tab" class="tab-content">
+        <h3>Очистка и Форматирование Текста</h3>
+        <div class="form-group">
+            <textarea id="rawText" rows="6" placeholder="Вставьте сюда текст или HTML..."></textarea>
+        </div>
+        <button onclick="cleanText()" class="submit-btn">Очистить Текст</button>
+        <div id="textResult" class="result-box" style="display:none;"></div>
+    </div>
+
+    <!-- TAB 3: PARSER -->
+    <div id="parser-tab" class="tab-content">
+        <h3>Извлечение картинок по URL</h3>
+        <div class="form-group">
+            <input type="text" id="pageUrl" placeholder="https://example.com">
+        </div>
+        <button onclick="extractMedia()" class="submit-btn">Спарсить Медиа</button>
+        <div id="parserResult" class="result-box" style="display:none;"></div>
+    </div>
+</div>
+
+<script>
+    function openTab(tabId, btn) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        btn.classList.add('active');
+    }
+
+    // Изображение
+    document.getElementById('imgForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData();
+        formData.append('file', document.getElementById('imgFile').files[0]);
+        formData.append('target_format', document.getElementById('targetFormat').value);
+        formData.append('strip_exif', document.getElementById('stripExif').checked);
+
+        const res = await fetch('/api/process-image', { method: 'POST', body: formData });
+        if(res.ok) {
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'processed_image';
+            a.click();
+        } else {
+            alert('Ошибка обработки файла');
+        }
+    });
+
+    // Текст
+    async function cleanText() {
+        const text = document.getElementById('rawText').value;
+        const formData = new FormData();
+        formData.append('text', text);
+
+        const res = await fetch('/api/clean-text', { method: 'POST', body: formData });
+        const data = await res.json();
+        const resDiv = document.getElementById('textResult');
+        resDiv.style.display = 'block';
+        resDiv.innerText = data.result;
+    }
+
+    // Парсер
+    async function extractMedia() {
+        const url = document.getElementById('pageUrl').value;
+        const formData = new FormData();
+        formData.append('url', url);
+
+        const res = await fetch('/api/extract-media', { method: 'POST', body: formData });
+        const data = await res.json();
+        const resDiv = document.getElementById('parserResult');
+        resDiv.style.display = 'block';
+        if(data.images) {
+            resDiv.innerHTML = `<p>Найдено картинок: ${data.total_images}</p>` + 
+                data.images.map(img => `<img src="${img}" style="max-width:100px; margin:5px;">`).join('');
+        } else {
+            resDiv.innerText = 'Не удалось извлечь медиа';
+        }
+    }
+</script>
+</body>
+</html>
