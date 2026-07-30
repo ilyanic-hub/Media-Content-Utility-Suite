@@ -11,6 +11,7 @@ from PIL import Image, ImageOps
 import httpx
 from bs4 import BeautifulSoup
 from fastapi.responses import PlainTextResponse
+import yt_dlp
 
 app = FastAPI(title="Media Utility Suite")
 
@@ -54,6 +55,68 @@ async def get_sitemap():
    </url>
 </urlset>"""
     return Response(content=content, media_type="application/xml")
+
+
+# ПАРСИНГ И СКАЧИВАНИЕ YOUTUBE
+# ---------------------------------------------------------
+@app.post("/api/youtube-info")
+async def youtube_info(url: str = Form(...)):
+    ydl_opts = {
+        'quiet': True,
+        'no_warnings': True,
+    }
+    
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            
+            formats = []
+            # Проверяем, есть ли список форматов (как на YouTube/Vimeo)
+            for f in info.get('formats', []):
+                if f.get('vcodec') != 'none' and f.get('acodec') != 'none':
+                    formats.append({
+                        'format_id': f.get('format_id'),
+                        'ext': f.get('ext'),
+                        'resolution': f.get('resolution') or f"{f.get('height')}p" if f.get('height') else "Скачать MP4",
+                    })
+            
+            # Если специфического списка форматов нет (как в TikTok / Reels), 
+            # отдаем дефолтный готовый файл
+            if not formats:
+                formats.append({
+                    'format_id': 'best',
+                    'ext': info.get('ext', 'mp4'),
+                    'resolution': 'Лучшее качество'
+                })
+            
+            return {
+                "title": info.get('title', 'Видео'),
+                "thumbnail": info.get('thumbnail'),
+                "formats": formats[::-1]
+            }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Не удалось вытащить видео: {str(e)}")
+
+
+@app.post("/api/download-youtube")
+async def download_youtube(url: str = Form(...), format_id: str = Form(...)):
+    """Получение прямой ссылки для скачивания конкретного качества"""
+    ydl_opts = {
+        'quiet': True,
+        'format': format_id
+    }
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            download_url = info.get('url')
+            filename = f"{info.get('title', 'video')}.{info.get('ext', 'mp4')}"
+            
+            return {
+                "download_url": download_url,
+                "filename": filename
+            }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Ошибка генерации ссылки: {str(e)}")
 
 
 # ---------------------------------------------------------
