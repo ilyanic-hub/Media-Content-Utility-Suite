@@ -220,3 +220,4 @@ async def download_zip(urls: str = Form(...)):
         zip_buffer,
         media_type="application/zip",
         headers={"Content-Disposition": 'attachment; filename="parsed_images.zip"'}
+    )
