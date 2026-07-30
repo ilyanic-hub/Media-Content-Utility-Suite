@@ -1,62 +1,64 @@
 import io
 import re
+from pathlib import Path
 from typing import Optional
+
 from fastapi import FastAPI, Request, UploadFile, File, Form, HTTPException
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
-from fastapi.responses import StreamingResponse, HTMLResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import StreamingResponse, HTMLResponse, JSONResponse, Response
 from fastapi.templating import Jinja2Templates
 from PIL import Image, ImageOps
 import httpx
 from bs4 import BeautifulSoup
-from pathlib import Path
 
 app = FastAPI(title="Media Utility Suite")
 
-# HTML шаблоны
-templates = Jinja2Templates(directory="templates")
-# Получаем абсолютный путь к папке с проектом
+# Абсолютный путь к папке templates
 BASE_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
+
+# Заглушка для favicon.ico (убирает 404 в консоли)
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return Response(status_code=204)
+
+
+# Главная страница
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
+
 # ---------------------------------------------------------
-# 1. КОНВЕРТАЦИЯ, СЖАТИЕ И УДАЛЕНИЕ EXIF (Идеи 1 и 3)
+# 1. КОНВЕРТАЦИЯ, СЖАТИЕ И УДАЛЕНИЕ EXIF
 # ---------------------------------------------------------
 @app.post("/api/process-image")
 async def process_image(
     file: UploadFile = File(...),
-    target_format: str = Form("WEBP"),  # WEBP, JPEG, PNG
-    quality: int = Form(80),            # 1-100
-    strip_exif: bool = Form(True),      # Очистка EXIF
+    target_format: str = Form("WEBP"),
+    quality: int = Form(80),
+    strip_exif: bool = Form(True),
     max_width: Optional[int] = Form(None)
 ):
     try:
         contents = await file.read()
         image = Image.open(io.BytesIO(contents))
 
-        # Исправляем ориентацию на основе EXIF перед его удалением
         try:
             image = ImageOps.exif_transpose(image)
         except Exception:
             pass
 
-        # Если делаем очистку EXIF — создаем новый холст без метаданных
         if strip_exif:
             clean_image = Image.new(image.mode, image.size)
             clean_image.putdata(list(image.getdata()))
             image = clean_image
 
-        # Ресайз при необходимости
         if max_width and image.width > max_width:
             aspect_ratio = max_width / float(image.width)
             new_height = int(float(image.height) * aspect_ratio)
             image = image.resize((max_width, new_height), Image.Resampling.LANCZOS)
 
-        # Конвертация RGBA в RGB для JPEG
         if target_format.upper() == "JPEG" and image.mode in ("RGBA", "P"):
             image = image.convert("RGB")
 
@@ -92,7 +94,7 @@ async def process_image(
 
 
 # ---------------------------------------------------------
-# 2. ОЧИСТКА И ОБРАБОТКА ТЕКСТА (Идея 3)
+# 2. ОЧИСТКА ТЕКСТА
 # ---------------------------------------------------------
 @app.post("/api/clean-text")
 async def clean_text(
@@ -124,7 +126,7 @@ async def clean_text(
 
 
 # ---------------------------------------------------------
-# 3. ПАРСИНГ И ИЗВЛЕЧЕНИЕ МЕДИА ПО ССЫЛКЕ (Идея 4)
+# 3. ПАРСИНГ МЕДИА ПО ССЫЛКЕ
 # ---------------------------------------------------------
 @app.post("/api/extract-media")
 async def extract_media(url: str = Form(...)):
@@ -144,12 +146,10 @@ async def extract_media(url: str = Form(...)):
 
     soup = BeautifulSoup(response.text, "html.parser")
 
-    # Мета-данные
     title = soup.title.string if soup.title else ""
     og_image = soup.find("meta", property="og:image")
     og_image_url = og_image["content"] if og_image and "content" in og_image.attrs else None
 
-    # Поиск всех картинок
     images = []
     for img in soup.find_all("img"):
         src = img.get("src") or img.get("data-src")
@@ -162,12 +162,11 @@ async def extract_media(url: str = Form(...)):
             if src.startswith("http"):
                 images.append(src)
 
-    # Удаляем дубликаты картинок
     unique_images = list(dict.fromkeys(images))
 
     return {
         "title": title,
         "main_image": og_image_url,
         "total_images": len(unique_images),
-        "images": unique_images[:30]  # Показываем первые 30
+        "images": unique_images[:30]
     }
