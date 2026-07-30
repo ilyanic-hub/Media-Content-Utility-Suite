@@ -2,7 +2,8 @@ import io
 import re
 from pathlib import Path
 from typing import Optional
-
+import zipfile
+from urllib.parse import urlparse
 from fastapi import FastAPI, Request, UploadFile, File, Form, HTTPException
 from fastapi.responses import StreamingResponse, HTMLResponse, JSONResponse, Response
 from fastapi.templating import Jinja2Templates
@@ -173,3 +174,42 @@ async def extract_media(url: str = Form(...)):
         "total_images": len(unique_images),
         "images": unique_images[:30]
     }
+
+# СКАЧИВАНИЕ ИЗОБРАЖЕНИЙ В ZIP
+# ---------------------------------------------------------
+@app.post("/api/download-zip")
+async def download_zip(urls: str = Form(...)):
+    # urls передаются строкой через запятую или переносы
+    url_list = [u.strip() for u in urls.split(",") if u.strip()]
+    if not url_list:
+        raise HTTPException(status_code=400, detail="Список URL пуст")
+
+    zip_buffer = io.BytesIO()
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    }
+
+    async with httpx.AsyncClient(follow_redirects=True, timeout=15.0) as client:
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+            for i, img_url in enumerate(url_list, start=1):
+                try:
+                    resp = await client.get(img_url, headers=headers)
+                    if resp.status_code == 200:
+                        # Пытаемся забрать оригинальное имя файла или создаем image_N
+                        parsed = urlparse(img_url)
+                        filename = Path(parsed.path).name
+                        if not filename or "." not in filename:
+                            ext = resp.headers.get("content-type", "").split("/")[-1]
+                            ext = "jpg" if ext not in ["png", "webp", "gif"] else ext
+                            filename = f"image_{i}.{ext}"
+
+                        zip_file.writestr(filename, resp.content)
+                except Exception:
+                    continue  # Пропускаем, если картинка не скачалась
+
+    zip_buffer.seek(0)
+    return StreamingResponse(
+        zip_buffer,
+        media_type="application/zip",
+        headers={"Content-Disposition": 'attachment; filename="parsed_images.zip"'}
