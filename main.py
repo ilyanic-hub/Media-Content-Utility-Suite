@@ -34,6 +34,7 @@ async def read_root(request: Request):
 
 
 # ---------------------------------------------------------
+# ---------------------------------------------------------
 # 1. КОНВЕРТАЦИЯ, СЖАТИЕ И УДАЛЕНИЕ EXIF
 # ---------------------------------------------------------
 @app.post("/api/process-image")
@@ -48,34 +49,40 @@ async def process_image(
         contents = await file.read()
         image = Image.open(io.BytesIO(contents))
 
+        # Разворачиваем изображение по ориентации EXIF до его удаления
         try:
             image = ImageOps.exif_transpose(image)
         except Exception:
             pass
 
-        if strip_exif:
-            clean_image = Image.new(image.mode, image.size)
-            clean_image.putdata(list(image.getdata()))
-            image = clean_image
-
+        # Ресайз при необходимости
         if max_width and image.width > max_width:
             aspect_ratio = max_width / float(image.width)
             new_height = int(float(image.height) * aspect_ratio)
             image = image.resize((max_width, new_height), Image.Resampling.LANCZOS)
 
-        if target_format.upper() == "JPEG" and image.mode in ("RGBA", "P"):
-            image = image.convert("RGB")
-
-        output_io = io.BytesIO()
         fmt = target_format.upper()
         if fmt == "JPG":
             fmt = "JPEG"
 
+        # Приведение цветовых режимов
+        if fmt == "JPEG" and image.mode in ("RGBA", "LA", "P"):
+            image = image.convert("RGB")
+        elif fmt in ("WEBP", "PNG") and image.mode not in ("RGB", "RGBA"):
+            image = image.convert("RGBA")
+
+        output_io = io.BytesIO()
         save_kwargs = {"format": fmt}
+
         if fmt in ("JPEG", "WEBP"):
             save_kwargs["quality"] = quality
             save_kwargs["optimize"] = True
 
+        # Если НЕ требуется стриать EXIF, пытаемся сохранить исходный
+        if not strip_exif and "exif" in image.info:
+            save_kwargs["exif"] = image.info["exif"]
+
+        # image.save() по умолчанию НЕ пишет EXIF, если мы его явно не передали в save_kwargs
         image.save(output_io, **save_kwargs)
         output_io.seek(0)
 
@@ -86,7 +93,8 @@ async def process_image(
         }
 
         ext = fmt.lower() if fmt != "JPEG" else "jpg"
-        filename = f"processed_{file.filename.rsplit('.', 1)[0]}.{ext}"
+        original_name = file.filename.rsplit('.', 1)[0] if file.filename else "image"
+        filename = f"processed_{original_name}.{ext}"
 
         return StreamingResponse(
             output_io,
@@ -95,7 +103,6 @@ async def process_image(
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Ошибка обработки изображения: {str(e)}")
-
 
 # ---------------------------------------------------------
 # 2. ОЧИСТКА ТЕКСТА
