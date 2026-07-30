@@ -104,13 +104,17 @@
                 <input type="file" id="imgFile" accept="image/*" required>
             </div>
             <div class="form-group">
-                <label>Формат:</label>
-                <select id="targetFormat">
-                    <option value="WEBP">WebP (Рекомендуется)</option>
-                    <option value="JPEG">JPEG</option>
-                    <option value="PNG">PNG</option>
-                </select>
-            </div>
+    <label>Формат назначения:</label>
+    <select id="targetFormat">
+        <option value="WEBP">WebP (Высокое сжатие для сайтов)</option>
+        <option value="AVIF">AVIF (Максимальное сжатие нового поколения)</option>
+        <option value="JPEG">JPEG (Классический фото-формат)</option>
+        <option value="PNG">PNG (С сохранением прозрачности)</option>
+        <option value="GIF">GIF (Графика и анимации)</option>
+        <option value="BMP">BMP (Несжатый точечный рисунок)</option>
+        <option value="TIFF">TIFF (Высокая детализация)</option>
+    </select>
+</div>
             <div class="form-group">
                 <label><input type="checkbox" id="stripExif" checked> Удалить EXIF метаданные (анонимизация)</label>
             </div>
