@@ -191,32 +191,6 @@
             .tab-content { padding: 12px; }
         }
 
-
-footer {
-    width: 100%;
-    max-width: 100%;
-    clear: both; /* Сбрасывает любые обтекания */
-    margin-top: 40px;
-    padding: 20px 10px;
-    text-align: center;
-    box-sizing: border-box; /* Чтобы padding не раздувал ширину */
-    border-top: 1px solid #334155;
-    color: #94a3b8;
-    font-size: 14px;
-}
-
-/* Фикс для ссылок в футере, чтобы они красиво переносились на узких экранах */
-footer p {
-    margin: 8px 0;
-    word-wrap: break-word;
-}
-
-footer a {
-    color: #38bdf8;
-    text-decoration: none;
-    display: inline-block; /* Позволяет аккуратно переносить ссылки */
-    padding: 2px 4px;
-}
     </style>
 </head>
 <body>
@@ -490,13 +464,31 @@ async function getDirectYtUrl(videoUrl, formatId) {
 }
 </script>
 
-<footer style="margin-top: 50px; padding: 20px 0; text-align: center; border-top: 1px solid #334155; color: #94a3b8; font-size: 14px;">
-    <p>© 2026 Media Utility Suite. Все права защищены.</p>
-    <p>
-        <a href="/privacy.html" style="color: #38bdf8; text-decoration: none; margin-right: 15px;">Политика конфиденциальности</a> | 
-        <a href="/terms.html" style="color: #38bdf8; text-decoration: none; margin-left: 15px;">Условия использования</a>
-    </p>
-</footer>
+footer {
+    width: 100%;
+    max-width: 100%;
+    clear: both; /* Сбрасывает любые обтекания */
+    margin-top: 40px;
+    padding: 20px 10px;
+    text-align: center;
+    box-sizing: border-box; /* Чтобы padding не раздувал ширину */
+    border-top: 1px solid #334155;
+    color: #94a3b8;
+    font-size: 14px;
+}
+
+/* Фикс для ссылок в футере, чтобы они красиво переносились на узких экранах */
+footer p {
+    margin: 8px 0;
+    word-wrap: break-word;
+}
+
+footer a {
+    color: #38bdf8;
+    text-decoration: none;
+    display: inline-block; /* Позволяет аккуратно переносить ссылки */
+    padding: 2px 4px;
+}
 
 </body>
 </html>
