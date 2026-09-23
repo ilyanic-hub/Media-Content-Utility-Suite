@@ -5,14 +5,14 @@ from typing import Optional
 import zipfile
 from urllib.parse import urlparse
 from fastapi import FastAPI, Request, UploadFile, File, Form, HTTPException
-from fastapi.responses import StreamingResponse, HTMLResponse, JSONResponse, Response
+from fastapi.responses import StreamingResponse, HTMLResponse, JSONResponse, Response, FileResponse
+
 from fastapi.templating import Jinja2Templates
 from PIL import Image, ImageOps
 import httpx
 from bs4 import BeautifulSoup
 from fastapi.responses import PlainTextResponse
 import yt_dlp
-from fastapi.responses import FileResponse
 
 app = FastAPI(title="Media Utility Suite")
 # Абсолютный путь к папке templates
