@@ -12,6 +12,7 @@ import httpx
 from bs4 import BeautifulSoup
 from fastapi.responses import PlainTextResponse
 import yt_dlp
+from fastapi.responses import FileResponse
 
 app = FastAPI(title="Media Utility Suite")
 # Абсолютный путь к папке templates
@@ -55,6 +56,10 @@ async def get_sitemap():
 </urlset>"""
     return Response(content=content, media_type="application/xml")
 
+
+@app.get("/telderi_a98d4f8d.html")  # имя файла от Telderi
+async def telderi_verify():
+    return FileResponse("telderi_a98d4f8d.html")
 
 # ПАРСИНГ И СКАЧИВАНИЕ YOUTUBE
 # ---------------------------------------------------------
