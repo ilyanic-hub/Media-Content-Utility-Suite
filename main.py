@@ -14,7 +14,7 @@ from fastapi.responses import PlainTextResponse
 import yt_dlp
 
 app = FastAPI(title="Media Utility Suite")
-
+<meta name="telderi" content="a98d4f8dab4483a155a5cfc0f6faff60" />
 # Абсолютный путь к папке templates
 BASE_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
