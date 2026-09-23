@@ -55,7 +55,6 @@ async def get_sitemap():
 </urlset>"""
     return Response(content=content, media_type="application/xml")
 
-<meta name="telderi" content="a98d4f8dab4483a155a5cfc0f6faff60" />
 
 # ПАРСИНГ И СКАЧИВАНИЕ YOUTUBE
 # ---------------------------------------------------------
