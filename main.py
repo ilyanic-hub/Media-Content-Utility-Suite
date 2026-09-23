@@ -59,7 +59,7 @@ async def get_sitemap():
 
 @app.get("/telderia98d4f8dab4483a155a5cfc0f6faff60.txt")  # имя файла от Telderi
 async def telderi_verify():
-    return FileResponse("telderi_a98d4f8d.html")
+    return FileResponse("telderia98d4f8dab4483a155a5cfc0f6faff60.txt")
 
 # ПАРСИНГ И СКАЧИВАНИЕ YOUTUBE
 # ---------------------------------------------------------
